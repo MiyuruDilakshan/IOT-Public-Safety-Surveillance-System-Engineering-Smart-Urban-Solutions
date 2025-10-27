@@ -1,0 +1,230 @@
+#include <TinyGPS++.h>
+#include <SoftwareSerial.h>
+#include <LiquidCrystal_I2C.h>
+#include <Adafruit_MLX90614.h>
+
+// Define pins
+const int GPS_RXPin = 4;    // GPS module RX
+const int GPS_TXPin = 5;    // GPS module TX
+const int SIM_RXPin = 3;    // SIM800L RX
+const int SIM_TXPin = 2;    // SIM800L TX
+const int FLAME_PIN = 6;    // Flame sensor
+const int SMOKE_PIN = A1;   // Smoke sensor
+const int BUZZER_PIN = 7;   // Buzzer
+
+// Baud rates
+const uint32_t GPSBaud = 9600;
+const uint32_t SIMBaud = 9600;
+
+// Objects
+TinyGPSPlus gps;
+SoftwareSerial gpsSerial(GPS_RXPin, GPS_TXPin);
+SoftwareSerial simSerial(SIM_RXPin, SIM_TXPin);
+LiquidCrystal_I2C lcd(0x27, 20, 4); // Adjust address if different
+Adafruit_MLX90614 mlx = Adafruit_MLX90614();
+
+// Global variables
+float lastLat = 0.0;
+float lastLng = 0.0;
+bool locationValid = false;
+bool fireDetectedPrev = false;
+bool highTempPrev = false;
+
+void setup() {
+  Serial.begin(9600);
+  gpsSerial.begin(GPSBaud);
+  simSerial.begin(SIMBaud);
+
+  // Initialize LCD
+  lcd.init();
+  lcd.backlight();
+  lcd.print("System Starting...");
+
+  // Initialize MLX90614
+  if (!mlx.begin()) {
+    Serial.println("Error: MLX90614 failed to initialize!");
+    lcd.setCursor(0, 1);
+    lcd.print("MLX90614 Error");
+    while (1);
+  }
+
+  // Set pin modes
+  pinMode(BUZZER_PIN, OUTPUT);
+  pinMode(FLAME_PIN, INPUT);
+  pinMode(SMOKE_PIN, INPUT); // Analog pin
+
+  // Set unused pins to INPUT to minimize power draw
+  for (int i = 8; i <= 13; i++) {
+    pinMode(i, INPUT);
+  }
+  pinMode(A0, INPUT);
+  pinMode(A2, INPUT);
+  pinMode(A3, INPUT);
+  // A4, A5 are I2C, managed by Wire library; A1 is smoke sensor
+
+  // Initialize SIM800L
+  simSerial.println("AT");
+  delay(1000);
+  simSerial.println("AT+CMGF=1"); // Set SMS to text mode
+  delay(1000);
+
+  lcd.clear();
+  lcd.print("System Ready");
+}
+
+void loop() {
+  // Update GPS periodically
+  updateGPS();
+
+  // Read body temperature
+  float bodyTemp = mlx.readObjectTempC();
+  Serial.print("Body Temp: ");
+  Serial.print(bodyTemp, 1);
+  Serial.println("°C");
+
+  // Update LCD with temperature
+  lcd.setCursor(0, 0);
+  lcd.print("Temp: ");
+  lcd.print(bodyTemp, 1);
+  lcd.print("C  ");
+
+  // Check for high temperature
+  bool highTemp = (bodyTemp > 37.5);
+  if (highTemp && !highTempPrev) {
+    Serial.println("High Temperature Detected!");
+    digitalWrite(BUZZER_PIN, HIGH);
+    delay(200);
+    digitalWrite(BUZZER_PIN, LOW);
+  }
+  highTempPrev = highTemp;
+
+  // Fire detection
+  bool flameDetected = digitalRead(FLAME_PIN) == HIGH;
+  int smokeLevel = analogRead(SMOKE_PIN);
+  bool fireDetected = (flameDetected || smokeLevel > 300);
+
+  Serial.print("Flame: ");
+  Serial.print(flameDetected ? "YES" : "NO");
+  Serial.print(" | Smoke: ");
+  Serial.print(smokeLevel);
+  Serial.print(" | Fire: ");
+  Serial.println(fireDetected ? "DETECTED" : "CLEAR");
+
+  if (fireDetected) {
+    lcd.setCursor(0, 2);
+    lcd.print("FIRE ALERT!");
+
+    if (!fireDetectedPrev) {
+      // Alert with buzzer
+      digitalWrite(BUZZER_PIN, HIGH);
+      delay(200);
+      digitalWrite(BUZZER_PIN, LOW);
+
+      // Force stop activities on A1, A4, A5, D6
+      enterPowerSavingMode();
+
+      // Send SMS with location
+      sendSMSWithLocation();
+
+      // Restart activities
+      exitPowerSavingMode();
+
+      // Reinitialize LCD after power-saving mode
+      lcd.init();           // Reinitialize LCD
+      lcd.backlight();      // Turn backlight back on
+      lcd.clear();          // Clear any garbage data
+      lcd.print("System Ready"); // Display initial message
+    }
+  } else {
+    lcd.setCursor(0, 2);
+    lcd.print("                "); // Clear alert
+  }
+  fireDetectedPrev = fireDetected;
+
+  delay(500); // Adjust loop timing as needed
+}
+
+// Update GPS data
+void updateGPS() {
+  gpsSerial.listen();
+  while (gpsSerial.available() > 0) {
+    if (gps.encode(gpsSerial.read())) {
+      if (gps.location.isValid()) {
+        lastLat = gps.location.lat();
+        lastLng = gps.location.lng();
+        locationValid = true;
+        Serial.print("GPS: ");
+        Serial.print(lastLat, 6);
+        Serial.print(", ");
+        Serial.println(lastLng, 6);
+      }
+    }
+  }
+}
+
+// Enter power-saving mode: Stop A1, A4, A5, D6 activities
+void enterPowerSavingMode() {
+  Serial.println("Entering Power-Saving Mode");
+  lcd.noBacklight();       // Stop LCD backlight (A4, A5 via I2C)
+  ADCSRA = 0;              // Disable ADC (stops A1 readings)
+  digitalWrite(BUZZER_PIN, LOW); // Ensure buzzer off
+  // D6 activity stopped by not reading it in loop
+}
+
+// Exit power-saving mode: Restart A1, A4, A5, D6 activities
+void exitPowerSavingMode() {
+  Serial.println("Exiting Power-Saving Mode");
+  lcd.backlight();         // Restart LCD backlight (A4, A5 via I2C)
+  ADCSRA = 0x87;           // Re-enable ADC (A1 resumes in loop)
+  // D6 resumes via digitalRead in loop
+}
+
+// Send SMS with location, with 30-second GPS timeout
+bool sendSMSWithLocation() {
+  unsigned long startTime = millis();
+  const unsigned long timeout = 30000; // 30 seconds
+  bool gotLocation = false;
+
+  // Focus on GPS
+  gpsSerial.listen();
+  Serial.println("Attempting GPS fix...");
+  while (millis() - startTime < timeout) {
+    while (gpsSerial.available() > 0) {
+      if (gps.encode(gpsSerial.read())) {
+        if (gps.location.isValid()) {
+          lastLat = gps.location.lat();
+          lastLng = gps.location.lng();
+          locationValid = true;
+          gotLocation = true;
+          Serial.println("GPS fix obtained");
+          break;
+        }
+      }
+    }
+    if (gotLocation) break;
+  }
+
+  // Switch to SIM800L
+  simSerial.listen();
+  simSerial.println("AT+CMGF=1");
+  delay(100);
+  simSerial.println("AT+CMGS=\"+94787517274\""); // Replace with your number
+  delay(100);
+
+  if (gotLocation) {
+    simSerial.print("Fire Alert! Location: ");
+    simSerial.print("https://maps.google.com/?q=");
+    simSerial.print(lastLat, 6);
+    simSerial.print(",");
+    simSerial.print(lastLng, 6);
+    simSerial.write(26); // Ctrl+Z to send SMS
+    Serial.println("SMS Sent with Location");
+  } else {
+    simSerial.print("Fire Alert! No Location");
+    simSerial.write(26);
+    Serial.println("SMS Sent without Location");
+  }
+  delay(1000); // Wait for SMS to send
+
+  return gotLocation;
+}

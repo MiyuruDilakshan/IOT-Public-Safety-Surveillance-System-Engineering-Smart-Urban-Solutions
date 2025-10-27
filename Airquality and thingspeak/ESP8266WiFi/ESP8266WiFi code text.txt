@@ -1,0 +1,81 @@
+#include <ESP8266WiFi.h>
+#include <ThingSpeak.h>
+
+// WiFi and ThingSpeak credentials
+const char* ssid = "Miyuru Dilakshan";
+const char* password = "123456789";
+unsigned long channelID = 2891925;
+const char* writeAPIKey = "Z969Y8BSNB00TLBD";
+
+WiFiClient client;
+
+void setup() {
+  Serial.begin(9600); // Match baud rate with Mega
+  delay(1000);        // Allow time for serial to initialize
+
+  // Connect to WiFi
+  Serial.print("Connecting to WiFi...");
+  WiFi.begin(ssid, password);
+  while (WiFi.status() != WL_CONNECTED) {
+    delay(500);
+    Serial.print(".");
+  }
+  Serial.println("\nConnected to WiFi");
+
+  // Initialize ThingSpeak
+  ThingSpeak.begin(client);
+}
+
+void loop() {
+  if (Serial.available()) {
+    // Read data until newline
+    String data = Serial.readStringUntil('\n');
+    
+    // Debug: Print received data
+    Serial.print("Received: ");
+    Serial.println(data);
+    
+    // Parse the comma-separated data
+    int comma1 = data.indexOf(',');
+    int comma2 = data.indexOf(',', comma1 + 1);
+    int comma3 = data.indexOf(',', comma2 + 1);
+    int comma4 = data.indexOf(',', comma3 + 1);
+    
+    if (comma1 != -1 && comma2 != -1 && comma3 != -1 && comma4 != -1) {
+      float temp = data.substring(0, comma1).toFloat();
+      float hum = data.substring(comma1 + 1, comma2).toFloat();
+      float co2 = data.substring(comma2 + 1, comma3).toFloat();
+      float nh3 = data.substring(comma3 + 1, comma4).toFloat();
+      float dust = data.substring(comma4 + 1).toFloat();
+      
+      // Debug: Print parsed values
+      Serial.print("Parsed - Temp: ");
+      Serial.print(temp);
+      Serial.print(", Hum: ");
+      Serial.print(hum);
+      Serial.print(", CO2: ");
+      Serial.print(co2);
+      Serial.print(", NH3: ");
+      Serial.print(nh3);
+      Serial.print(", Dust: ");
+      Serial.println(dust);
+      
+      // Set ThingSpeak fields
+      ThingSpeak.setField(1, temp);
+      ThingSpeak.setField(2, hum);
+      ThingSpeak.setField(3, co2);
+      ThingSpeak.setField(4, nh3);
+      ThingSpeak.setField(5, dust);
+      
+      // Send data to ThingSpeak
+      int response = ThingSpeak.writeFields(channelID, writeAPIKey);
+      if (response == 200) {
+        Serial.println("Data sent to ThingSpeak successfully");
+      } else {
+        Serial.println("Error sending data: HTTP " + String(response));
+      }
+    } else {
+      Serial.println("Invalid data format: Not enough commas");
+    }
+  }
+}
