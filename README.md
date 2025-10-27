@@ -118,7 +118,7 @@ Immediate response required!
 
 ### Unit 1: Air Quality Monitor
 
-![Unit 1 Circuit](https://raw.githubusercontent.com/MiyuruDilakshan/IOT-Public-Safety-Surveillance-System-Engineering-Smart-Urban-Solutions/main/Circuit%20Diagrams/Unit%201%20Air%20Quality%20Monitoring.png)
+![Unit 1 Circuit](https://raw.githubusercontent.com/MiyuruDilakshan/IOT-Public-Safety-Surveillance-System-Engineering-Smart-Urban-Solutions/refs/heads/main/Circuit%20Diagrams/Unit%201%20-%20Air%20Quality%20Monitoring.png)
 
 **Components:**
 - Arduino Mega 2560 (Main Controller)
@@ -136,7 +136,7 @@ Sensors → Arduino Mega → NodeMCU ESP8266 → WiFi → ThingSpeak Cloud → W
 
 ### Unit 2: Fire Detection & Health Scanner
 
-![Unit 2 Circuit](https://raw.githubusercontent.com/MiyuruDilakshan/IOT-Public-Safety-Surveillance-System-Engineering-Smart-Urban-Solutions/main/Circuit%20Diagrams/Unit%202%20Fire%20Detection%20%26%20Health%20Surveillance.png)
+![Unit 2 Circuit](https://raw.githubusercontent.com/MiyuruDilakshan/IOT-Public-Safety-Surveillance-System-Engineering-Smart-Urban-Solutions/refs/heads/main/Circuit%20Diagrams/Unit%202%20-%20Fire%20Detection%20and%20Health%20Surveillance.png)
 
 **Components:**
 - Arduino Uno (Main Controller)
@@ -376,7 +376,7 @@ Temp: 38.2°C
 
 **Sample Visualization:**
 
-![Dashboard Example](https://thingspeak.com/channels/2891925/charts/1?width=450&height=260&results=60&dynamic=true&title=Temperature)
+![Dashboard Example](https://raw.githubusercontent.com/MiyuruDilakshan/IOT-Public-Safety-Surveillance-System-Engineering-Smart-Urban-Solutions/refs/heads/main/Circuit%20Diagrams/thingspeak.png)
 
 **Features:**
 - 📈 Real-time charts
@@ -384,18 +384,6 @@ Temp: 38.2°C
 - 🕐 Time-series analysis
 - 📱 Mobile responsive
 - 🔗 Embeddable widgets
-
----
-
-## 📸 Gallery
-
-### System Images
-
-<div align="center">
-
-| Unit 1: Air Quality Station | Unit 2: Emergency Detector |
-|:---------------------------:|:--------------------------:|
-| ![Unit 1](https://raw.githubusercontent.com/MiyuruDilakshan/IOT-Public-Safety-Surveillance-System-Engineering-Smart-Urban-Solutions/main/Circuit%20Diagrams/Unit%201%20Air%20Quality%20Monitoring.png) | ![Unit 2](https://raw.githubusercontent.com/MiyuruDilakshan/IOT-Public-Safety-Surveillance-System-Engineering-Smart-Urban-Solutions/main/Circuit%20Diagrams/Unit%202%20Fire%20Detection%20%26%20Health%20Surveillance.png) |
 
 </div>
 
@@ -523,42 +511,6 @@ Temp: 38.2°C
 - Public transport station monitoring
 - Event venue safety management
 - Community environmental awareness
-
----
-
-## 💰 Cost Breakdown
-
-### Bill of Materials
-
-#### Unit 1: Air Quality Monitor (~$35)
-
-| Component | Quantity | Unit Price | Total |
-|-----------|----------|------------|-------|
-| Arduino Mega 2560 | 1 | $12.00 | $12.00 |
-| NodeMCU ESP8266 | 1 | $5.00 | $5.00 |
-| DHT22 Sensor | 1 | $4.00 | $4.00 |
-| MQ-135 Gas Sensor | 1 | $3.00 | $3.00 |
-| GP2Y1014AU0F Dust Sensor | 1 | $6.00 | $6.00 |
-| Resistors & Capacitors | - | $2.00 | $2.00 |
-| Breadboard & Wires | - | $3.00 | $3.00 |
-
-#### Unit 2: Fire & Health (~$45)
-
-| Component | Quantity | Unit Price | Total |
-|-----------|----------|------------|-------|
-| Arduino Uno | 1 | $8.00 | $8.00 |
-| KY-026 Flame Sensor | 1 | $2.00 | $2.00 |
-| MQ-2 Smoke Sensor | 1 | $3.00 | $3.00 |
-| MLX90614 IR Thermometer | 1 | $10.00 | $10.00 |
-| NEO-6M GPS Module | 1 | $8.00 | $8.00 |
-| SIM800L GSM Module | 1 | $7.00 | $7.00 |
-| 16x2 LCD I2C | 1 | $3.00 | $3.00 |
-| Buzzer | 1 | $1.00 | $1.00 |
-| Misc Components | - | $3.00 | $3.00 |
-
-**Total System Cost: ~$80**
-
-*Compared to commercial solutions ($500-$5000), this system offers 85-98% cost savings!*
 
 ---
 
